@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 
-def preprocessing(df):
+def preprocess_data(df):
     for i in list(set(df['UserId'])):
         if len(df.loc[df['UserId']==i]) < 2:
             df.drop(df.loc[df['UserId'] == i].index, inplace=True)

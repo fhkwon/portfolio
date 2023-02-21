@@ -1,4 +1,4 @@
-from preprocessing import SparseFeat
+from .preprocessing import SparseFeat
 
 import tensorflow as tf
 from tensorflow import keras

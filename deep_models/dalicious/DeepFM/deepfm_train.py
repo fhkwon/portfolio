@@ -4,9 +4,11 @@ import pandas as pd
 from datetime import datetime
 from tensorflow import keras
 
-from preprocessing import to_zero, fill_birth, drop_foodtag,fill_users, split_xy, SparseFeat
-from deepfm_model import DeepFM
-from ..multi import compile_model
+from .preprocessing import to_zero, fill_birth, drop_foodtag,fill_users, split_xy, SparseFeat
+from .deepfm_model import DeepFM
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from multi import compile_model
 
 
 def train_deepfm(db_path, cls_order_path, cls_food_path, cls_user_path, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, 

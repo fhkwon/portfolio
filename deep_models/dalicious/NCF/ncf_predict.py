@@ -3,8 +3,10 @@ import pandas as pd
 import os
 import json
 
-from ncf_model import NCF, EarlyStopping
-from ..multi import compile_model, make_predict_original_unavailable, make_input_ids, make_leftovers, save_predictions
+from .ncf_model import NCF, EarlyStopping
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from multi import compile_model, make_predict_original_unavailable, make_input_ids, make_leftovers, save_predictions
 
 def predict_ncf(num_users, num_items, embedding_size, layers, reg_layers, reg_mf, 
                 model_load_file, learner, lr, db_path, user_group_path, food_makers_path, user2id, item2id, save_path, model_name):

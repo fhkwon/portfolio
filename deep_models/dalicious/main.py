@@ -2,16 +2,16 @@ import pandas as pd
 import numpy as np
 import argparse
 
-from .NCF.ncf_train import train_ncf
-from .NCF.ncf_predict import predict_ncf
-from .DeepFM.deepfm_train import train_deepfm
-from .DeepFM.deepfm_predict import predict_deepfm
+from NCF.ncf_train import train_ncf
+from NCF.ncf_predict import predict_ncf
+from DeepFM.deepfm_train import train_deepfm
+from DeepFM.deepfm_predict import predict_deepfm
 from multi import make_scores
 
 #################### Arguments ####################
 def parse_args():
     parser = argparse.ArgumentParser(description="Run NeuMF.")
-    parser.add_argument('--db_path', nargs='?', default='../../../data/',
+    parser.add_argument('--db_path', nargs='?', default='../../data/',
                         help='Input data path.')
     parser.add_argument('--num_epochs', type=int, default=100,
                         help='Number of epochs.')

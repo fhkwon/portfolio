@@ -3,9 +3,11 @@ import pandas as pd
 import os
 import json
 
-from deepfm_model import DeepFM
-from ..multi import compile_model, make_predict_original_unavailable, make_input_ids, make_leftovers, save_predictions
-from preprocessing import to_zero, fill_birth, fill_users
+from .deepfm_model import DeepFM
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from multi import compile_model, make_predict_original_unavailable, make_input_ids, make_leftovers, save_predictions
+from .preprocessing import to_zero, fill_birth, fill_users
 
 def predict_deepfm(feature_named_tuple, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, dnn_activation, dnn_dropout, 
                 model_load_file, learner, db_path, user_group_path, food_makers_path, user2id, item2id, users_df, food_df,
