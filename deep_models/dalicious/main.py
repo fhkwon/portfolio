@@ -6,11 +6,12 @@ from NCF.ncf_train import train_ncf
 from NCF.ncf_predict import predict_ncf
 from DeepFM.deepfm_train import train_deepfm
 from DeepFM.deepfm_predict import predict_deepfm
-from multi import make_scores
 
 #################### Arguments ####################
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run NeuMF.")
+    parser = argparse.ArgumentParser(description="Run Deep Hybrid Model.")
+    parser.add_argument('--train', nargs='?', default=True,
+                        help='Willing to train data?.')
     parser.add_argument('--db_path', nargs='?', default='../../data/',
                         help='Input data path.')
     parser.add_argument('--num_epochs', type=int, default=100,
@@ -31,8 +32,10 @@ def parse_args():
                         help='test set에 사용할 negative test item 수를 정하자')
     parser.add_argument('--lr', type=float, default=0.001,
                         help='Learning rate.')
-    parser.add_argument('--learner', nargs='?', default='adamax',
-                        help='Specify an optimizer: adagrad, adam, rmsprop, sgd')
+    parser.add_argument('--ncf_learner', nargs='?', default='adam',
+                        help='Specify an optimizer for ncf model: adagrad, adam, rmsprop, sgd')
+    parser.add_argument('--deepfm_learner', nargs='?', default='adamax',
+                        help='Specify an optimizer for deepfm model: adagrad, adam, rmsprop, sgd')
     parser.add_argument('--verbose', type=int, default=1,
                         help='각 iter 마다 출력할 길이. 보통 0 은 출력하지 않고, 1은 자세히, 2는 함축적인 정보만 출력하는 형태.')
     parser.add_argument('--out', type=int, default=1,
@@ -45,7 +48,7 @@ def parse_args():
                         help="evaluation할 때 상위 몇개의 결과에 대해서 할 건지 정해주세요. ")
     parser.add_argument('--order_path', nargs='?', default='raw_data/order/order_raw.csv',
                         help="주문 데이터를 불러올 경로를 설정해 주세요.")
-    parser.add_argument('--user_group_path', nargs='?', default='pps_data/able/able_user_group.csv',
+    parser.add_argument('--user_group_path', nargs='?', default='pps_data/particular_able/able_more_user.csv',
                         help="현재 주문 가능한 유저와 그룹 데이터를 불러올 경로를 설정해주세요.")
     parser.add_argument('--food_makers_path', nargs='?', default='pps_data/able/able_food_makers.csv',
                         help="현재 주문 가능한 음식과 메이커스 데이터를 불러올 경로를 설정해주세요. ")
@@ -80,6 +83,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    train = args.train
     db_path = args.db_path
     num_epochs = args.num_epochs
     batch_size = args.batch_size
@@ -90,7 +94,8 @@ if __name__ == '__main__':
     num_neg = args.num_neg
     num_ng_test = args.num_ng_test
     lr = args.lr
-    learner = args.learner
+    ncf_learner = args.ncf_learner
+    deepfm_learner = args.deepfm_learner
     verbose = args.verbose
     out = args.out
     mf_pretrain = args.mf_pretrain
@@ -116,18 +121,37 @@ if __name__ == '__main__':
     cls_user_path=args.cls_user_path
 
     num_users, num_items, model_out_file, user2id, item2id = train_ncf(db_path, order_path, num_ng_test, num_neg, embedding_size, 
-                                                                       layers, reg_layers, reg_mf, learner, lr, num_epochs, batch_size, verbose, out, topK)
+                                                                       layers, reg_layers, reg_mf, ncf_learner, lr, num_epochs, batch_size, verbose, out, topK)
     
     ncf_user_food_df, ncf_group_makers_df, ncf_user_makers_df = predict_ncf(num_users, num_items, embedding_size, layers, reg_layers, reg_mf, 
-                                                                            model_load_file, learner, lr, db_path, user_group_path, food_makers_path, user2id, item2id, save_path, model_name='ncf')
+                                                                            model_out_file, ncf_learner, lr, db_path, user_group_path, food_makers_path, user2id, item2id, save_path='NCF/outputs', model_name='ncf')
     
     model_out_file, user2id, item2id, users_df, food_df, feature_named_tuple, sparse_features = train_deepfm(db_path, cls_order_path, cls_food_path, cls_user_path, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, 
-                                                                                                             dnn_activation, dnn_dropout, learner, patience, batch_size, num_epochs, validation_split)
+                                                                                                             dnn_activation, dnn_dropout, deepfm_learner, lr, patience, batch_size, num_epochs, validation_split)
     
     deepfm_user_food_df, deepfm_group_makers_df, deepfm_user_makers_df = predict_deepfm(feature_named_tuple, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, dnn_activation, dnn_dropout, 
-                                                                                        model_load_file, learner, db_path, user_group_path, food_makers_path, user2id, item2id, users_df, food_df,
-                                                                                        sparse_features, save_path, model_name = 'deepfm')
-    
+                                                                                        model_out_file, deepfm_learner, lr, db_path, user_group_path, food_makers_path, user2id, item2id, users_df, food_df,
+                                                                                        sparse_features, save_path='DeepFM/outputs', model_name='deepfm')
+
+    ncf_user_food_df = pd.read_csv('NCF/outputs/ncf_user_food_score.csv')
+    deepfm_user_food_df = pd.read_csv('DeepFM/outputs/deepfm_user_food_score.csv')
+    ncf_group_makers_df = pd.read_csv('NCF/outputs/ncf_group_makers_score.csv')
+    deepfm_group_makers_df = pd.read_csv('DeepFM/outputs/deepfm_group_makers_score.csv')
+    ncf_user_makers_df = pd.read_csv('NCF/outputs/ncf_user_makers_score.csv')
+    deepfm_user_makers_df = pd.read_csv('DeepFM/outputs/deepfm_user_makers_score.csv')
+
+    def make_scores(ncf, deepfm):
+        cols = list(ncf.columns)
+        ncf.percentage = ncf.percentage*3
+        ncf.rename(columns={'percentage':'percentage_n'}, inplace=True)
+        deepfm.rename(columns={'percentage':'percentage_d'}, inplace=True)
+        ncf.drop_duplicates(subset=cols[:2], inplace=True)
+        deepfm.drop_duplicates(subset=cols[:2], inplace=True)
+        sum_user_food = pd.concat([ncf, deepfm]).drop_duplicates().fillna(0).groupby(by=cols[:2]).sum().reset_index()
+        sum_user_food['percentage'] = sum_user_food.percentage_d + sum_user_food.percentage_n
+        sum_user_food.drop(columns=['percentage_n', 'percentage_d'], inplace=True)
+        return sum_user_food
+
     user_foods_score = make_scores(ncf_user_food_df, deepfm_user_food_df)
     group_makers_score = make_scores(ncf_group_makers_df, deepfm_group_makers_df)
     user_makers_score = make_scores(ncf_user_makers_df, deepfm_user_makers_df)
@@ -135,4 +159,5 @@ if __name__ == '__main__':
     user_foods_score.to_csv('results/user_foods_score.csv', index=False)
     group_makers_score.to_csv('results/group_makers_score.csv', index=False)
     user_makers_score.to_csv('results/user_makers_score.csv', index=False)
-
+    
+    print('All three predictions are saved. Please check results file.')

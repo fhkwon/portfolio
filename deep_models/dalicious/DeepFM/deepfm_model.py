@@ -3,20 +3,11 @@ from .preprocessing import SparseFeat
 import tensorflow as tf
 from tensorflow import keras
 
-from tensorflow.python.keras.layers import Input, Embedding, Layer, Flatten, Dropout, Activation, Dense
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.regularizers import l2
-
+from keras.layers import Input, Embedding, Layer, Flatten, Dropout, Activation, Dense, BatchNormalization, Concatenate
+from keras.models import Model
+from keras.regularizers import l2
+from keras.initializers import Zeros, Ones, glorot_normal
 from collections import OrderedDict
-
-try:
-    from tensorflow.python.ops.init_ops_v2 import Zeros, Ones, glorot_normal
-except ImportError:
-    from tensorflow.python.ops.init_ops import Zeros, Ones, glorot_normal_initializer as glorot_normal
-try:
-    from tensorflow.python.keras.layers import BatchNormalization
-except ImportError:
-    BatchNormalization = tf.keras.layers.BatchNormalization
 
 def create_input_layers(named_tuple):
     inputs_dict = OrderedDict()
@@ -210,11 +201,11 @@ def DeepFM(feature_named_tuple, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, 
     group_embedding_list = embedding_lookup(sparse_embedding, inputs_dict, feature_named_tuple)
     emb_concat = tf.concat(group_embedding_list, axis=1)
     fm_logit = FM()(emb_concat)
-    wide_output = keras.layers.Concatenate(axis=1, name='wide_output')([linear_logit, fm_logit])
+    wide_output = Concatenate(axis=1, name='wide_output')([linear_logit, fm_logit])
     dnn_input = Flatten()(emb_concat)
     dnn_output = DNN(dnn_hidden_units, dnn_activation, l2_reg_dnn, dnn_dropout, dnn_use_bn, seed=seed)(dnn_input)
     dnn_logit = Dense(1, use_bias=True)(dnn_output)
-    outputs_concat = keras.layers.Concatenate(axis=1)([wide_output, dnn_logit])
+    outputs_concat = Concatenate(axis=1)([wide_output, dnn_logit])
     output = Final_Dense(output_dim=1, activation='sigmoid')(outputs_concat)
     model = Model(inputs=inputs_list, outputs=output)
 

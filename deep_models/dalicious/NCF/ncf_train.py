@@ -7,10 +7,10 @@ from time import time
 
 from .preprocessing import preprocess_data, train_test_split, make_train_lists, make_test_lists
 from .ncf_model import NCF, EarlyStopping
+from .eval import evaluate_model
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from multi import compile_model
-from .eval import evaluate_model
 
 def train_ncf(db_path, order_path, num_ng_test, num_neg, embedding_size, 
               layers, reg_layers, reg_mf, learner, lr, num_epochs, batch_size, verbose, out, topK):
@@ -58,7 +58,7 @@ def train_ncf(db_path, order_path, num_ng_test, num_neg, embedding_size,
     print("End. Best Iteration %d:  HR = %.4f, NDCG = %.4f. " %(best_iter, best_hr, best_ndcg))
     if out > 0:
         datentime = datetime.now().strftime('%Y-%m-%d_%H_%M_%S')
-        model_out_file = f'Pretrain/NeuMF_{datentime}.h5'
+        model_out_file = f'NCF/Pretrain/NeuMF_{datentime}.h5'
         model.save_weights(model_out_file, overwrite=True)
         print("The best NeuMF model is saved to %s" %(model_out_file))
     

@@ -3,31 +3,6 @@ import pandas as pd
 from collections import namedtuple
 from tensorflow.python.keras.initializers import RandomNormal
 
-def to_zero(x):
-    try:
-        x = str(round(x))
-        x = pd.to_datetime(x, format="%Y%m%d")
-        x = x.date().strftime("%Y%m%d")[:4]
-        current_dt = datetime.date.today().strftime("%Y%m%d")[:4]
-        x = int(current_dt)-int(x) #BirthDate => int
-        
-        if x < 10: #10대 아파트 조식 존재할 수 있기 때문에 -> 10살 아래는 이상치라고 생각해서 다 0으로 변환
-            x=0
-    except:
-        x = 0
-    return x
-
-def fill_birth(df):
-    mean_ages = dict(df[df['Birth'] != 0].groupby('GroupId').Birth.mean())
-    for i in range(len(df)):
-        if df.iloc[i, 1] == 0:
-            if df.iloc[i,0] in mean_ages:
-                df.iloc[i,1] = round(mean_ages[df.iloc[i,0]])
-            else:
-                df.iloc[i,1] = round(mean_ages[0])
-        else:
-            pass
-    return df
 
 def drop_foodtag(food_df, df):
     food_cols = list(food_df.columns)

@@ -1,6 +1,7 @@
 import os
 import pandas as pd
-from keras.optimizers import Adagrad, Adam, SGD, RMSprop
+import keras
+from keras.optimizers import Adagrad, Adam, SGD, RMSprop, Adamax
 
 def compile_model(model, learner, lr):
     if learner.lower() == "adagrad": 
@@ -9,6 +10,9 @@ def compile_model(model, learner, lr):
         model.compile(optimizer=RMSprop(learning_rate=lr), loss='binary_crossentropy')
     elif learner.lower() == "adam":
         model.compile(optimizer=Adam(learning_rate=lr), loss='binary_crossentropy')
+    elif learner.lower() == "adamax":
+        model.compile(optimizer=Adamax(learning_rate=lr), loss='binary_crossentropy', 
+                      metrics=[keras.metrics.AUC(), keras.metrics.BinaryAccuracy()])
     else:
         model.compile(optimizer=SGD(learning_rate=lr), loss='binary_crossentropy')
     return model
@@ -67,12 +71,3 @@ def save_predictions(users, foods, newpreds, available_group_user, food_makers_d
     user_makers_df.to_csv(os.path.join(save_path, f"{model_name}_user_makers_score.csv"), index=False)
     print(f'All three predictions are saved. Please check {save_path}')
     return user_food_df, group_makers_df, user_makers_df
-
-def make_scores(ncf, deepfm):
-    cols = list(ncf.columns)
-    if len(ncf) != len(deepfm):
-        print(f'The length of the elements of ncf and deepfm does not mathch:,     ncf: {len(ncf)}, deepfm:{len(deepfm)}')
-    score_df = pd.DataFrame([ncf[cols[0]], ncf[cols[1]], ncf.percentage*3 + deepfm.percentage]).T
-    score_df.columns = ['UserId', 'FoodId', 'score']
-    score_df.fillna(0)
-    return score_df

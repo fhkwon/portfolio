@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 from tensorflow import keras
 
-from .preprocessing import to_zero, fill_birth, drop_foodtag,fill_users, split_xy, SparseFeat
+from .preprocessing import drop_foodtag,fill_users, split_xy, SparseFeat
 from .deepfm_model import DeepFM
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
@@ -12,15 +12,13 @@ from multi import compile_model
 
 
 def train_deepfm(db_path, cls_order_path, cls_food_path, cls_user_path, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, 
-                 dnn_activation, dnn_dropout, learner, patience, batch_size, num_epochs, validation_split):
+                 dnn_activation, dnn_dropout, learner, lr, patience, batch_size, num_epochs, validation_split):
     data = pd.read_csv(os.path.join(db_path, cls_order_path),  encoding='cp949', engine='python', index_col='Unnamed: 0' )
     COL_NAME = ['OrderId', 'UserId', 'Created', 'selected_FoodId', 'GroupId', 'FoodId', 'selected']
     data.columns = COL_NAME
     unneccessary_cols = ['selected_FoodId', 'Created']
     data.drop(columns=unneccessary_cols, inplace=True)
-    # , names=COL_NAME
-    # COL_NAME = ['movie_id', 'title', 'genres']
-    food_df = pd.read_csv(os.path.join(db_path, cls_food_path, "foodtag.csv"), engine='python', index_col='Unnamed: 0' )
+    food_df = pd.read_csv(os.path.join(db_path, cls_food_path), engine='python', index_col='Unnamed: 0' )
     food_df.rename(columns={'요리스타일_한식': 'cook_korean', '요리스타일_분식': 'cook_bunsik', '요리스타일_중식': 'cook_chinese', '요리스타일_일식': 'cook_japanese', 
                             '요리스타일_양식': 'cook_western', '요리스타일_동남아': 'cook_eastasia', '요리스타일_인도': 'cook_india', '국가_한국':'nation_korea', '국가_중국': 'nation_china', 
                             '국가_홍콩': 'nation_honkong', '국가_대만': 'nation_taiwan', '국가_일본': 'nation_japan', '국가_미국': 'nation_america', '국가_멕시코': 'nation_mexico', 
@@ -46,15 +44,11 @@ def train_deepfm(db_path, cls_order_path, cls_food_path, cls_user_path, l2_reg_d
                             '특이식성_다이어트':'pref_diet', '메뉴 제공방식_도시락':'served_dosirak', '메뉴 제공방식_코스':'served_course', '메뉴 제공방식_뷔페':'served_buffet', 
                             '메뉴 제공방식_메인메뉴':'served_main', '메뉴 제공방식_디저트':'served_dessert', '메뉴 제공방식_박스 케이터링':'served_box', '매움정도_1':'spicy_1', 
                             '매움정도_2':'spicy_2', '매움정도_3':'spicy_3'}, inplace=True)
-    # COL_NAME = ['user_id', 'gender', 'age', 'occupation', 'zip']
     users_df = pd.read_csv(os.path.join(db_path, cls_user_path),  encoding='cp949', engine='python', index_col='Unnamed: 0')
     data = data.merge(users_df, how="left")
     data = data.merge(food_df, how="left")
     data.set_index('OrderId', inplace=True)
-    b_df = data[["GroupId","Birth"]]
-    b_df["Birth"] = b_df["Birth"].apply( lambda x : to_zero(x))
-    b_df = fill_birth(b_df)
-    data['Birth'] = b_df['Birth']
+    
     data = drop_foodtag(food_df, data)
     data, max_values = fill_users(users_df, data)
     user2id = {w: i for i, w in enumerate(list(set(data['UserId'])))}
@@ -64,12 +58,12 @@ def train_deepfm(db_path, cls_order_path, cls_food_path, cls_user_path, l2_reg_d
     model_input = {name: data[name] for name in sparse_features}
 
     model = DeepFM(feature_named_tuple, l2_reg_dnn, dnn_use_bn, seed, dnn_hidden_units, dnn_activation, dnn_dropout)
-    model = compile_model(model, learner)
+    model = compile_model(model, learner, lr)
     early_stopping_callback = keras.callbacks.EarlyStopping(patience=patience, restore_best_weights=True)
     history = model.fit(model_input, data[target].values,
                         batch_size=batch_size, epochs=num_epochs, verbose=1, validation_split=validation_split, callbacks=[early_stopping_callback])
-    datentime = datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')
-    model_out_file = f'Pretrain/DeepFM_{datentime}.h5'
+    datentime = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    model_out_file = f'DeepFM/Pretrain/DeepFM_{datentime}.h5'
     model.save_weights(model_out_file, overwrite=True)
 
     return model_out_file, user2id, item2id, users_df, food_df, feature_named_tuple, sparse_features
